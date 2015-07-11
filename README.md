@@ -1,6 +1,6 @@
 # promissum #
 
-A promise/future library for Clojure (built on top of jdk8 completable future).
+A composable promise/future library for Clojure (built on top of jdk8 completable future).
 
 This package targets Clojure 1.7 and JDK8.
 
