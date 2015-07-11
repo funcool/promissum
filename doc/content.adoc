@@ -1,0 +1,235 @@
+= promissum - composable promise/future library for Clojure
+Andrey Antukh, <niwi@niwi.be>
+:toc: left
+:toclevels: 2
+:numbered:
+:source-highlighter: pygments
+:pygments-style: friendly
+:sectlinks:
+
+
+== Introduction
+
+A composable promise/future library for Clojure built on top of jdk8 completable futures.
+
+
+== Project Maturity
+
+Since _promissum_ is a young project there may be some API breakage.
+
+
+== Install
+
+The simplest way to use _promissum_ library in a Clojure project is by including
+it as a dependency:
+
+[source, clojure]
+----
+[funcool/promissum "0.1.0"]
+----
+
+== User Guide
+
+=== Introduction
+
+Is the abstraction that represents the result of an asynchronous operation that will be eventually
+available.
+
+Clojure comes with a builtin promise abstraction but it is designed only blocking operations, and in
+our circumstances it is very limited approach. The _promissum_'s promise abstraction uses the jdk8
+completable future as underlying implementation and all promises can be easily coerced to
+jdk future or completable future.
+
+The promise consists in a container that eventually will contain a value with builtin support for
+error handling. So the promise has three different states:
+
+- `resolved`: means that the promise contains a value.
+- `rejected`: means thet the promise contains an error.
+
+
+=== Creating a promise.
+
+It there several different ways to create a promise in _promissum_ library. You can create it inmediatelly
+resolved with initial value or inmediatelly rejected with an exception.
+
+Let start with a basic example using the commonly known promise delivering in clojure:
+
+[source, clojure]
+----
+(require '[promissum.core :as p])
+
+(def pr (p/promise))
+
+(future
+  (Thread/sleep 200)
+  (p/deliver pr 20))]
+
+(p/then pr (fn [v]
+             (println v)))
+
+;; After 200ms it will print `20`
+----
+
+An other way to create a promise is using a factory function that can resolve or reject
+promise in asynchrnous way. If you are familiar with javascript promises, you will found
+that very similar:
+
+[source, clojure]
+----
+(def pr (p/promise
+          (fn [deliver]
+            (deliver 1))))
+----
+
+
+=== Blocking operations
+
+The _promissum_'s promises can be used as drop in replacement for clojure promises, because them offers
+also blocking operations:
+
+[source, clojure]
+----
+@pr
+;; => 1
+----
+
+If you try to deref a promise that is rejected, the exception will be rereaised in the
+calling thread.
+
+
+=== State checking
+
+_promissum_ provides useful predicates that will allow check the state of a promise in any time.
+
+Let see some examples:
+
+[source, clojure]
+----
+(def pr (p/promise 2))
+
+(p/promise? pr)
+;; => true
+
+(p/pending? pr)
+;; => false
+
+(p/resolved? pr)
+;; => true
+
+(p/rejected? pr)
+;; => false
+
+(p/done? pr)
+;; => true
+----
+
+The `done?` predicate checks if a promise is fullfiled, independently if is resolved or rejected.
+
+
+=== Promise chaining
+
+_Promissum_ also offers powerful chaining methods for allow easy compose async computations. In
+previous examples we have seen `then` function, let see an other more complex example using it:
+
+[source, clojure]
+----
+(def pr (-> (p/promise 2)
+            (p/then inc)
+            (p/then inc)))
+
+(p/then pr (fn [v]
+             (println v)))
+
+;; It will print 4.
+----
+
+
+=== Error handling
+
+It also exposes a chain method for error handling:
+
+[source, clojure]
+----
+(def pr (-> (p/promise 2)
+            (p/then (fn [v] (throw (ex-info "foobar" {}))))))
+
+(p/catch pr (fn [error]
+              (println "Error:" (.getMessage error))))
+;; Will print something like "Error: foobar"
+----
+
+The `catch` chain function also return a promise, that will be resolved or rejected
+depending on that will happen inside the catch handler.
+
+
+=== Working with collections
+
+In some circumstances you will want wait a completion of few promises at same time, and _promissum_
+also provides helpers for that:
+
+[source, clojure]
+----
+@(p/all [(p/promise 1) (p/promise 2)])
+;; => [1 2]
+
+@(p/any [(p/promise 1) (p/promise (ex-info "error" {}))])
+;; => 1
+----
+
+== Contribute
+
+**promissum** unlike Clojure and other Clojure contrib libs, does not have many
+restrictions for contributions. Just open a issue or pull request.
+
+
+== Get the Code
+
+_promissum_ is open source and can be found on link:https://github.com/funcool/promissum[github].
+
+You can clone the public repository with this command:
+
+[source,text]
+----
+git clone https://github.com/funcool/promissum
+----
+
+== Run tests
+
+For run tests just execute this:
+
+[source, text]
+----
+lein test
+----
+
+
+== License
+
+_promissum_ is licensed under BSD (2-Clause) license:
+
+----
+Copyright (c) 2015 Andrey Antukh <niwi@niwi.nz>
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----
