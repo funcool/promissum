@@ -4,9 +4,8 @@
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.7.0" :scope "provided"]
-                 [cats "0.4.0"]
-                 [manifold "0.1.0"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha" :scope "test"]]
+                 [funcool/cats "0.5.0"]
+                 [manifold "0.1.0"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :source-paths ["src"]
