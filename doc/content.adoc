@@ -10,7 +10,8 @@ Andrey Antukh, <niwi@niwi.be>
 
 == Introduction
 
-A composable promise/future library for Clojure built on top of jdk8 completable futures.
+A composable promise/future library for Clojure built on top of jdk8 completable
+futures.
 
 
 == Project Maturity
@@ -32,16 +33,19 @@ it as a dependency:
 
 === Introduction
 
-Is the abstraction that represents the result of an asynchronous operation that will be eventually
-available.
+Is the abstraction that represents the result of an asynchronous operation that will
+be eventually available.
 
-Clojure comes with a builtin promise abstraction but it is designed only blocking operations, and in
-our circumstances it is very limited approach. The _promissum_'s promise abstraction uses the jdk8
-completable future as underlying implementation and all promises can be easily coerced to
-jdk future or completable future.
+Clojure comes with a builtin promise abstraction but it is designed only for
+blocking operations, and in async environments the blocking operations are
+completely discouraged.
 
-The promise consists in a container that eventually will contain a value with builtin support for
-error handling. So the promise has three different states:
+The _promissum_'s promise abstraction uses the jdk8 completable future as underlying
+implementation, then all promises can be easily coerced to jdk future or completable
+future with low overhead.
+
+The promise consists in a container that eventually will contain a value with
+builtin support for error handling. So the promise has three different states:
 
 - `resolved`: means that the promise contains a value.
 - `rejected`: means thet the promise contains an error.
@@ -49,10 +53,11 @@ error handling. So the promise has three different states:
 
 === Creating a promise.
 
-It there several different ways to create a promise in _promissum_ library. You can create it inmediatelly
-resolved with initial value or inmediatelly rejected with an exception.
+It there several different ways to create a promise in _promissum_ library. You can
+create it already resolved with initial value or already rejected with an exception.
 
-Let start with a basic example using the commonly known promise delivering in clojure:
+Let start with a basic example using the commonly known promise delivering in
+clojure:
 
 [source, clojure]
 ----
@@ -70,9 +75,9 @@ Let start with a basic example using the commonly known promise delivering in cl
 ;; After 200ms it will print `20`
 ----
 
-An other way to create a promise is using a factory function that can resolve or reject
-promise in asynchrnous way. If you are familiar with javascript promises, you will found
-that very similar:
+An other way to create a promise is using a factory function that can resolve or
+reject promise in asynchronous way. If you are familiar with javascript promises,
+you will found that very familiar:
 
 [source, clojure]
 ----
@@ -82,10 +87,24 @@ that very similar:
 ----
 
 
+=== Creating a future
+
+The _promissum_ library also exposes a convenient macro for clojure `future` macro
+replacement. It works in exactly manner that the clojure version, with a little
+difference that it returns a composable promise that can be easyly chained in an
+asynchronous way.
+
+See an example:
+
+(deref (p/future
+         (Thread/sleep 200)
+         (+ 1 2)))
+;; => 3
+
+
 === Blocking operations
 
-The _promissum_'s promises can be used as drop in replacement for clojure promises, because them offers
-also blocking operations:
+The _promissum_'s promises can be used as drop in replacement for clojure promises, because them offers also blocking operations:
 
 [source, clojure]
 ----
@@ -93,13 +112,14 @@ also blocking operations:
 ;; => 1
 ----
 
-If you try to deref a promise that is rejected, the exception will be rereaised in the
-calling thread.
+If you try to deref a promise that is rejected, the exception will be rereaised in
+the calling thread.
 
 
 === State checking
 
-_promissum_ provides useful predicates that will allow check the state of a promise in any time.
+_promissum_ provides useful predicates that will allow check the state of a promise
+in any time.
 
 Let see some examples:
 
@@ -123,13 +143,15 @@ Let see some examples:
 ;; => true
 ----
 
-The `done?` predicate checks if a promise is fullfiled, independently if is resolved or rejected.
+The `done?` predicate checks if a promise is fullfiled, independently if is resolved
+or rejected.
 
 
 === Promise chaining
 
-_Promissum_ also offers powerful chaining methods for allow easy compose async computations. In
-previous examples we have seen `then` function, let see an other more complex example using it:
+_Promissum_ also offers powerful chaining methods for allow easy compose async
+computations. In previous examples we have seen `then` function, let see an other
+more complex example using it:
 
 [source, clojure]
 ----
@@ -164,8 +186,8 @@ depending on that will happen inside the catch handler.
 
 === Working with collections
 
-In some circumstances you will want wait a completion of few promises at same time, and _promissum_
-also provides helpers for that:
+In some circumstances you will want wait a completion of few promises at same time,
+and _promissum_ also provides helpers for that:
 
 [source, clojure]
 ----
@@ -192,6 +214,7 @@ You can clone the public repository with this command:
 ----
 git clone https://github.com/funcool/promissum
 ----
+
 
 == Run tests
 
