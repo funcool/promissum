@@ -25,7 +25,7 @@
 (ns promissum.core
   "A promise implementation for Clojure that uses jdk8
   completable futures behind the scenes."
-  (:refer-clojure :exclude [future promise deliver])
+  (:refer-clojure :exclude [future promise deliver await])
   (:require [cats.core :as m]
             [cats.protocols :as cats]
             [promissum.protocols :as proto]
@@ -36,9 +36,11 @@
            java.util.concurrent.ExecutionException
            java.util.concurrent.CompletionException
            java.util.concurrent.TimeUnit
+           java.util.concurrent.Future
            java.util.concurrent.Executor
            java.util.concurrent.ForkJoinPool
-           java.util.function.Function))
+           java.util.function.Function
+           java.util.function.Supplier))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Concurrency
@@ -48,17 +50,19 @@
        :dynamic true}
   *executor* (ForkJoinPool/commonPool))
 
-(defn- function
+(defn function
   "Given an plain function `f`, return an
   instace of the java.util.concurrent.Function
   class."
+  {:no-doc true}
   [f]
   (reify Function
     (apply [_ v] (f v))))
 
-(defn- schedule
+(defn schedule
   "Schedule a functon to execute in
   a provided executor service."
+  {:no-doc true}
   ([func] (schedule *executor* func))
   ([^Executor executor ^Runnable func]
    (.execute executor func)))
@@ -67,177 +71,197 @@
 ;; Monad type implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare promise*)
+(declare all)
+(declare impl-flatmap)
+(declare impl-map)
 
 (def ^{:no-doc true}
   promise-monad
   (reify
     cats/Functor
     (fmap [mn f mv]
-      (proto/then mv f))
+      (impl-map mv f))
+
+    cats/Applicative
+    (fapply [_ af av]
+      (impl-map (all [af av])
+                (fn [[afv avv]]
+                  (afv avv))))
 
     cats/Monad
     (mreturn [_ v]
-      (promise* v))
+      (proto/promise v))
 
     (mbind [mn mv f]
       (let [ctx m/*context*]
-        (proto/then mv (fn [v]
-                         (m/with-monad ctx
-                           (f v))))))))
+        (impl-flatmap mv (fn [v]
+                           (m/with-monad ctx
+                             (f v))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare impl-extract)
-(declare impl-deref)
-(declare impl-deref-await)
-(declare impl-then)
-(declare impl-error)
-(declare impl-deliver)
-
-(deftype Promise [^CompletionStage cf]
-  cats/Context
-  (get-context [_]
-    promise-monad)
-
-  cats/Extract
-  (extract [_]
-    (impl-extract cf))
-
-  clojure.lang.IDeref
-  (deref [_]
-    (impl-deref cf))
-
-  clojure.lang.IPending
-  (isRealized [_]
-    (.isDone cf))
-
-  clojure.lang.IBlockingDeref
-  (deref [_ ^long ms defaultvalue]
-    (impl-deref-await cf ms defaultvalue))
-
-  proto/IState
-  (rejected? [_]
-    (.isCompletedExceptionally cf))
-
-  (resolved? [_]
-    (and (not (.isCompletedExceptionally cf))
-         (not (.isCancelled cf))
-         (.isDone cf)))
-
-  (done? [_]
-    (.isDone cf))
-
-  proto/IPromise
-  (then [_ callback]
-    (impl-then cf callback))
-
-  (error [_ callback]
-    (impl-error cf callback))
-
-  (deliver [_ value]
-    (impl-deliver cf value)))
-
-(defn- impl-deref
-  [^CompletionStage cf]
-  (try
-    (.get cf)
-    (catch ExecutionException e
-      (let [e' (.getCause e)]
-        (.setStackTrace e' (.getStackTrace e))
-        (throw e')))
-    (catch CompletionException e
-      (let [e' (.getCause e)]
-        (.setStackTrace e' (.getStackTrace e))
-        (throw e')))))
-
-(defn- impl-deref-await
-  [^CompletionStage cf ^long ms default]
-  (try
-    (.get cf ms TimeUnit/SECONDS)
-    (catch TimeoutException e
-      default)
-    (catch ExecutionException e
-      (let [e' (.getCause e)]
-        (.setStackTrace e' (.getStackTrace e))
-        (throw e')))
-    (catch CompletionException e
-      (let [e' (.getCause e)]
-        (.setStackTrace e' (.getStackTrace e))
-        (throw e')))))
+(defn- impl-get-context
+  [^CompletionStage cs]
+  promise-monad)
 
 (defn- impl-extract
-  [^CompletionStage cf]
+  [^CompletionStage cs]
   (try
-    (.getNow cf nil)
+    (.getNow cs nil)
     (catch ExecutionException e
       (.getCause e))
     (catch CompletionException e
       (.getCause e))))
 
-(defn- impl-then
+(defn- impl-rejected?
+  [^CompletionStage cs]
+  (.isCompletedExceptionally cs))
+
+(defn- impl-resolved?
+  [^CompletionStage cs]
+  (and (not (.isCompletedExceptionally cs))
+       (not (.isCancelled cs))
+       (.isDone cs)))
+
+(defn- impl-done?
+  [^CompletionStage cs]
+  (.isDone cs))
+
+(defn- impl-map
   [^CompletionStage cf cb]
-  (-> (.thenApplyAsync cf (function cb) *executor*)
-      (Promise.)))
+  (.thenApplyAsync cf (function cb) *executor*))
+
+(defn- impl-flatmap
+  [^CompletionStage cf cb]
+  (.thenComposeAsync cf (function cb) *executor*))
 
 (defn- impl-error
-  [^CompletionStage cf callback]
+  [^CompletionStage cs callback]
   (->> (function #(callback (.getCause %)))
-       (.exceptionally cf)
-       (Promise.)))
+       (.exceptionally cs)))
 
 (defn- impl-deliver
-  [^CompletionStage cf v]
+  [^CompletableFuture cs v]
   (if (instance? Throwable v)
-    (.completeExceptionally cf v)
-    (.complete cf v)))
+    (.completeExceptionally cs v)
+    (.complete cs v)))
 
-(alter-meta! #'->Promise assoc :private true)
+(defn- impl-deref
+  [cs]
+  (try
+    (.get cs)
+    (catch ExecutionException e
+      (let [e' (.getCause e)]
+        (.setStackTrace e' (.getStackTrace e))
+        (throw e')))
+    (catch CompletionException e
+      (let [e' (.getCause e)]
+        (.setStackTrace e' (.getStackTrace e))
+        (throw e')))))
+
+(defn- impl-await
+  ([^Future cs]
+   (try
+     (.get cs)
+     (catch ExecutionException e
+       (let [e' (.getCause e)]
+         (.setStackTrace e' (.getStackTrace e))
+         (throw e')))
+     (catch CompletionException e
+       (let [e' (.getCause e)]
+         (.setStackTrace e' (.getStackTrace e))
+         (throw e')))))
+  ([^Future cs ^long ms]
+   (impl-await cs ms nil))
+  ([^Future cs ^long ms default]
+   (try
+     (.get cs ms TimeUnit/SECONDS)
+     (catch TimeoutException e
+       default)
+     (catch ExecutionException e
+       (let [e' (.getCause e)]
+         (.setStackTrace e' (.getStackTrace e))
+         (throw e')))
+     (catch CompletionException e
+      (let [e' (.getCause e)]
+        (.setStackTrace e' (.getStackTrace e))
+        (throw e'))))))
+
+(extend CompletionStage
+  cats/Context
+  {:get-context impl-get-context}
+
+  cats/Extract
+  {:extract impl-extract}
+
+  proto/IState
+  {:rejected? impl-rejected?
+   :resolved? impl-resolved?
+   :done? impl-done?}
+
+  proto/IFuture
+  {:map impl-map
+   :flatmap impl-flatmap
+   :error impl-error})
+
+(extend Future
+  proto/IAwaitable
+  {:await impl-await})
+
+(extend CompletableFuture
+  cats/Context
+  {:get-context impl-get-context}
+
+  cats/Extract
+  {:extract impl-extract}
+
+  proto/IState
+  {:rejected? impl-rejected?
+   :resolved? impl-resolved?
+   :done? impl-done?}
+
+  proto/IFuture
+  {:map impl-map
+   :flatmap impl-flatmap
+   :error impl-error}
+
+  proto/IPromise
+  {:deliver impl-deliver})
+
+(defn promisef [func]
+  (let [promise (CompletableFuture.)]
+    (schedule (fn []
+                (try
+                  (func #(proto/deliver promise %))
+                  (catch Throwable e
+                    (proto/deliver promise e)))))
+    promise))
 
 (extend-protocol proto/IPromiseFactory
-  clojure.lang.Fn
-  (promise [func]
-    (let [futura (CompletableFuture.)
-          promise (Promise. futura)]
-      (schedule (fn []
-                  (try
-                    (func #(proto/deliver promise %))
-                    (catch Throwable e
-                      (proto/deliver promise e)))))
-      promise))
-
   Throwable
   (promise [e]
-    (let [p (proto/promise nil)]
+    (let [p (CompletableFuture.)]
       (proto/deliver p e)
       p))
 
   CompletionStage
   (promise [cs]
-    (Promise. cs))
-
-  Promise
-  (promise [p]
-    (proto/then p identity))
+    cs)
 
   manifold.deferred.IDeferred
   (promise [d]
-    (let [pr (proto/promise nil)
-          callback #(proto/deliver pr %)]
+    (let [p (CompletableFuture.)
+          callback #(proto/deliver p %)]
       (md/on-realized d callback callback)
-      pr))
-
-  nil
-  (promise [_]
-    (Promise. (CompletableFuture.)))
+      p))
 
   Object
   (promise [v]
-    (let [pr (proto/promise nil)]
-      (proto/deliver pr v)
-      pr)))
+    (let [p (CompletableFuture.)]
+      (proto/deliver p v)
+      p)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -251,23 +275,23 @@
 
   - throwable
   - plain value
-  - factory function
 
   In case of the initial value is instance of `Throwable`, rejected
   promise will be retrned. In case of a plain value (not throwable),
-  a resolved promise will be returned. And finally, if a function
-  or any callable is provided, that function will be executed with
-  one argument as callback for mark the promise resolved or rejected.
-
-      (promise (fn [deliver]
-                 (future
-                   (Thread/sleep 200)
-                   (deliver 1))))
-
-  The body of that function can be asynchronous and the promise can
-  be freely resolved in other thread."
-  ([] (proto/promise nil))
+  a resolved promise will be returned."
+  ([] (CompletableFuture.))
   ([v] (proto/promise v)))
+
+(defmacro future
+  "Takes a body of expressions and yields a promise object that will
+  invoke the body in another thread.
+  This is a drop in replacement for the clojure's builtin `future`
+  function that return composable promises."
+  [& body]
+  `(let [suplier# (reify Supplier
+                    (get [_]
+                      ~@body))]
+     (CompletableFuture/supplyAsync suplier# *executor*)))
 
 (defn promise?
   "Returns true if `p` is a promise
@@ -300,11 +324,6 @@
   [p]
   (not (proto/done? p)))
 
-(defn promise->future
-  "Converts a promise in a CompletableFuture instance."
-  [^Promise p]
-  (.-cf p))
-
 (defn deliver
   "Mark the promise as completed or rejected with optional
   value.
@@ -321,31 +340,23 @@
   that is resolved  when all the items in the
   array are resolved."
   [promises]
-  (let [xform (comp
-               (map promise)
-               (map promise->future))]
-    (-> (into-array CompletableFuture (sequence xform promises))
-        (CompletableFuture/allOf)
-        (Promise.)
-        (proto/then (fn [_] (mapv deref promises))))))
+  (-> (into-array CompletableFuture (sequence (map proto/promise) promises))
+      (CompletableFuture/allOf)
+      (proto/map (fn [_] (mapv deref promises)))))
 
 (defn any
   "Given an array of promises, return a promise
   that is resolved when first one item in the
   array is resolved."
   [promises]
-  (let [xform (comp
-               (map promise)
-               (map promise->future))]
-    (->> (sequence xform promises)
-         (into-array CompletableFuture)
-         (CompletableFuture/anyOf)
-         (Promise.))))
+  (->> (sequence (map proto/promise) promises)
+       (into-array CompletableFuture)
+       (CompletableFuture/anyOf)))
 
 (defn then
   "A chain helper for promises."
   [p callback]
-  (proto/then p callback))
+  (proto/map p callback))
 
 (defn catch
   "Catch all promise chain helper."
@@ -359,3 +370,12 @@
   (let [e (m/extract p)]
     (when (instance? Throwable e)
       e)))
+
+(defn await
+  ([^CompletionStage cs]
+   (proto/await cs))
+  ([^CompletionStage cs ^long ms]
+   (proto/await cs ms))
+  ([^CompletionStage cs ^long ms ^Object default]
+   (proto/await cs ms default)))
+

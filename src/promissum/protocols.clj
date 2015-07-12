@@ -23,7 +23,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promissum.protocols
-  (:refer-clojure :exclude [promise deliver]))
+  (:refer-clojure :exclude [promise deliver map await]))
 
 (defprotocol IState
   "Additional state related abstraction."
@@ -31,10 +31,20 @@
   (resolved? [_] "Returns true if a promise is resolved.")
   (done? [_] "Retutns true if a promise is already done."))
 
+(defprotocol IFuture
+  "A basic future abstraction."
+  (map [_ callback] "Chain a promise.")
+  (flatmap [_ callback] "Chain a promise.")
+  (error [_ callback] "Catch a error in a promise."))
+
+(defprotocol IAwaitable
+  (await
+    [awaitable]
+    [awaitable ms]
+    [awaitable ms default]))
+
 (defprotocol IPromise
   "A basic promise abstraction."
-  (then [_ callback] "Chain a promise.")
-  (error [_ callback] "Catch a error in a promise.")
   (deliver [_ value] "Deliver a value into promise."))
 
 (defprotocol IPromiseFactory
