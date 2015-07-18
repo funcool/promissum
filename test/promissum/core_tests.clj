@@ -89,6 +89,19 @@
   (testing "Arbitrary select first resolved promise"
     (let [p1 (p/any [(p/promise 1) (p/promise (ex-info "" {}))])]
       (is (= @p1 1))))
+
+  (testing "Delivery with factory"
+    (let [p (p/promise (fn [deliver]
+                         (deliver 2)))]
+      (is (= @p 2))))
+
+  (testing "A `resolved` constructor."
+    (is (= 2 @(p/resolved 2))))
+
+  (testing "A `rejected` constructor with await"
+    (let [exc (ex-info "foo" {:bar :baz})]
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (p/await (p/rejected exc))))))
   )
 
 (deftest futures-replacement

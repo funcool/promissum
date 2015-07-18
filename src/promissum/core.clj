@@ -68,39 +68,10 @@
    (.execute executor func)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Monad type implementation
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(declare all)
-(declare impl-flatmap)
-(declare impl-map)
-
-(def ^{:no-doc true}
-  promise-monad
-  (reify
-    cats/Functor
-    (fmap [mn f mv]
-      (impl-map mv f))
-
-    cats/Applicative
-    (fapply [_ af av]
-      (impl-map (all [af av])
-                (fn [[afv avv]]
-                  (afv avv))))
-
-    cats/Monad
-    (mreturn [_ v]
-      (proto/promise v))
-
-    (mbind [mn mv f]
-      (let [ctx m/*context*]
-        (impl-flatmap mv (fn [v]
-                           (m/with-monad ctx
-                             (f v))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare promise-monad)
 
 (defn- impl-get-context
   [^CompletionStage cs]
@@ -230,16 +201,17 @@
   proto/IPromise
   {:deliver impl-deliver})
 
-(defn promisef [func]
-  (let [promise (CompletableFuture.)]
-    (schedule (fn []
-                (try
-                  (func #(proto/deliver promise %))
-                  (catch Throwable e
-                    (proto/deliver promise e)))))
-    promise))
-
 (extend-protocol proto/IPromiseFactory
+  clojure.lang.Fn
+  (promise [func]
+    (let [promise (CompletableFuture.)]
+      (schedule (fn []
+                  (try
+                    (func #(proto/deliver promise %))
+                    (catch Throwable e
+                      (proto/deliver promise e)))))
+      promise))
+
   Throwable
   (promise [e]
     (let [p (CompletableFuture.)]
@@ -267,6 +239,8 @@
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Constructors
+
 (defn promise
   "A promise constructor.
 
@@ -281,6 +255,22 @@
   a resolved promise will be returned."
   ([] (CompletableFuture.))
   ([v] (proto/promise v)))
+
+(defn resolved
+  "Takes a value `v` and return a resolved promise
+  with that value."
+  [v]
+  (let [cf (CompletableFuture.)]
+    (.complete cf v)
+    cf))
+
+(defn rejected
+  "Takes a error `e` and return a rejected promise
+  with that error."
+  [e]
+  (let [cf (CompletableFuture.)]
+    (.completeExceptionally cf e)
+    cf))
 
 (defmacro future
   "Takes a body of expressions and yields a promise object that will
@@ -379,3 +369,29 @@
   ([^CompletionStage cs ^long ms ^Object default]
    (proto/await cs ms default)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Monad type implementation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def ^{:no-doc true}
+  promise-monad
+  (reify
+    cats/Functor
+    (fmap [mn f mv]
+      (impl-map mv f))
+
+    cats/Applicative
+    (fapply [_ af av]
+      (impl-map (all [af av])
+                (fn [[afv avv]]
+                  (afv avv))))
+
+    cats/Monad
+    (mreturn [_ v]
+      (proto/promise v))
+
+    (mbind [mn mv f]
+      (let [ctx m/*context*]
+        (impl-flatmap mv (fn [v]
+                           (m/with-monad ctx
+                             (f v))))))))
