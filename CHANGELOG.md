@@ -2,6 +2,6 @@
 
 ## Version 0.1.0 ##
 
-Date: Unreleased
+Date: 2015-07-21
 
 - First relase.
