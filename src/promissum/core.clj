@@ -27,6 +27,7 @@
   completable futures behind the scenes."
   (:refer-clojure :exclude [future promise deliver await])
   (:require [cats.core :as m]
+            [cats.context :as mc]
             [cats.protocols :as cats]
             [promissum.protocols :as proto]
             [manifold.deferred :as md])
@@ -391,7 +392,7 @@
       (proto/promise v))
 
     (mbind [mn mv f]
-      (let [ctx m/*context*]
+      (let [ctx mc/*context*]
         (impl-flatmap mv (fn [v]
                            (m/with-monad ctx
                              (f v))))))))
