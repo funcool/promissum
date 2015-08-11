@@ -12,6 +12,7 @@
   :test-paths ["test"]
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
   :javac-options ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
+  :repositories [["clojars" {:sign-releases false}]]
   :profiles {:dev {:codeina {:sources ["src"]
                              :reader :clojure
                              :target "doc/dist/latest/api"
