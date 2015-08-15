@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 1.5.2">
+<meta name="author" content="Andrey Antukh, &lt;niwi@niwi.be&gt;">
+<title>promissum - composable promise/future library for Clojure</title>
+<style>
+.listingblock .pygments .hll { background-color: #ffffcc }
+.listingblock .pygments  { background: #f0f0f0; }
+.listingblock .pygments .tok-c { color: #60a0b0; font-style: italic } /* Comment */
+.listingblock .pygments .tok-err { border: 1px solid #FF0000 } /* Error */
+.listingblock .pygments .tok-k { color: #007020; font-weight: bold } /* Keyword */
+.listingblock .pygments .tok-o { color: #666666 } /* Operator */
+.listingblock .pygments .tok-cm { color: #60a0b0; font-style: italic } /* Comment.Multiline */
+.listingblock .pygments .tok-cp { color: #007020 } /* Comment.Preproc */
+.listingblock .pygments .tok-c1 { color: #60a0b0; font-style: italic } /* Comment.Single */
+.listingblock .pygments .tok-cs { color: #60a0b0; background-color: #fff0f0 } /* Comment.Special */
+.listingblock .pygments .tok-gd { color: #A00000 } /* Generic.Deleted */
+.listingblock .pygments .tok-ge { font-style: italic } /* Generic.Emph */
+.listingblock .pygments .tok-gr { color: #FF0000 } /* Generic.Error */
+.listingblock .pygments .tok-gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.listingblock .pygments .tok-gi { color: #00A000 } /* Generic.Inserted */
+.listingblock .pygments .tok-go { color: #888888 } /* Generic.Output */
+.listingblock .pygments .tok-gp { color: #c65d09; font-weight: bold } /* Generic.Prompt */
+.listingblock .pygments .tok-gs { font-weight: bold } /* Generic.Strong */
+.listingblock .pygments .tok-gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.listingblock .pygments .tok-gt { color: #0044DD } /* Generic.Traceback */
+.listingblock .pygments .tok-kc { color: #007020; font-weight: bold } /* Keyword.Constant */
+.listingblock .pygments .tok-kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
+.listingblock .pygments .tok-kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
+.listingblock .pygments .tok-kp { color: #007020 } /* Keyword.Pseudo */
+.listingblock .pygments .tok-kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
+.listingblock .pygments .tok-kt { color: #902000 } /* Keyword.Type */
+.listingblock .pygments .tok-m { color: #40a070 } /* Literal.Number */
+.listingblock .pygments .tok-s { color: #4070a0 } /* Literal.String */
+.listingblock .pygments .tok-na { color: #4070a0 } /* Name.Attribute */
+.listingblock .pygments .tok-nb { color: #007020 } /* Name.Builtin */
+.listingblock .pygments .tok-nc { color: #0e84b5; font-weight: bold } /* Name.Class */
+.listingblock .pygments .tok-no { color: #60add5 } /* Name.Constant */
+.listingblock .pygments .tok-nd { color: #555555; font-weight: bold } /* Name.Decorator */
+.listingblock .pygments .tok-ni { color: #d55537; font-weight: bold } /* Name.Entity */
+.listingblock .pygments .tok-ne { color: #007020 } /* Name.Exception */
+.listingblock .pygments .tok-nf { color: #06287e } /* Name.Function */
+.listingblock .pygments .tok-nl { color: #002070; font-weight: bold } /* Name.Label */
+.listingblock .pygments .tok-nn { color: #0e84b5; font-weight: bold } /* Name.Namespace */
+.listingblock .pygments .tok-nt { color: #062873; font-weight: bold } /* Name.Tag */
+.listingblock .pygments .tok-nv { color: #bb60d5 } /* Name.Variable */
+.listingblock .pygments .tok-ow { color: #007020; font-weight: bold } /* Operator.Word */
+.listingblock .pygments .tok-w { color: #bbbbbb } /* Text.Whitespace */
+.listingblock .pygments .tok-mb { color: #40a070 } /* Literal.Number.Bin */
+.listingblock .pygments .tok-mf { color: #40a070 } /* Literal.Number.Float */
+.listingblock .pygments .tok-mh { color: #40a070 } /* Literal.Number.Hex */
+.listingblock .pygments .tok-mi { color: #40a070 } /* Literal.Number.Integer */
+.listingblock .pygments .tok-mo { color: #40a070 } /* Literal.Number.Oct */
+.listingblock .pygments .tok-sb { color: #4070a0 } /* Literal.String.Backtick */
+.listingblock .pygments .tok-sc { color: #4070a0 } /* Literal.String.Char */
+.listingblock .pygments .tok-sd { color: #4070a0; font-style: italic } /* Literal.String.Doc */
+.listingblock .pygments .tok-s2 { color: #4070a0 } /* Literal.String.Double */
+.listingblock .pygments .tok-se { color: #4070a0; font-weight: bold } /* Literal.String.Escape */
+.listingblock .pygments .tok-sh { color: #4070a0 } /* Literal.String.Heredoc */
+.listingblock .pygments .tok-si { color: #70a0d0; font-style: italic } /* Literal.String.Interpol */
+.listingblock .pygments .tok-sx { color: #c65d09 } /* Literal.String.Other */
+.listingblock .pygments .tok-sr { color: #235388 } /* Literal.String.Regex */
+.listingblock .pygments .tok-s1 { color: #4070a0 } /* Literal.String.Single */
+.listingblock .pygments .tok-ss { color: #517918 } /* Literal.String.Symbol */
+.listingblock .pygments .tok-bp { color: #007020 } /* Name.Builtin.Pseudo */
+.listingblock .pygments .tok-vc { color: #bb60d5 } /* Name.Variable.Class */
+.listingblock .pygments .tok-vg { color: #bb60d5 } /* Name.Variable.Global */
+.listingblock .pygments .tok-vi { color: #bb60d5 } /* Name.Variable.Instance */
+.listingblock .pygments .tok-il { color: #40a070 } /* Literal.Number.Integer.Long */
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic|Liberation+Mono:400|Roboto+Slab:400,700"/>
+<link rel="stylesheet" href="https://www.niwi.nz/_assets/asciidoctor-styles/simple-red-titles/stylesheet.css"/>
+</head>
+<body class="article toc2 toc-left">
+<div id="header">
+<h1>promissum - composable promise/future library for Clojure</h1>
+<div class="details">
+<span id="author" class="author">Andrey Antukh, &lt;niwi@niwi.be&gt;</span><br>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_introduction">1. Introduction</a></li>
+<li><a href="#_project_maturity">2. Project Maturity</a></li>
+<li><a href="#_install">3. Install</a></li>
+<li><a href="#_user_guide">4. User Guide</a>
+<ul class="sectlevel2">
+<li><a href="#_introduction_2">4.1. Introduction</a></li>
+<li><a href="#_creating_a_promise">4.2. Creating a promise.</a></li>
+<li><a href="#_creating_a_future">4.3. Creating a future</a></li>
+<li><a href="#_blocking_operations">4.4. Blocking operations</a></li>
+<li><a href="#_state_checking">4.5. State checking</a></li>
+<li><a href="#_promise_chaining">4.6. Promise chaining</a></li>
+<li><a href="#_error_handling">4.7. Error handling</a></li>
+<li><a href="#_working_with_collections">4.8. Working with collections</a></li>
+</ul>
+</li>
+<li><a href="#_contribute">5. Contribute</a></li>
+<li><a href="#_get_the_code">6. Get the Code</a></li>
+<li><a href="#_run_tests">7. Run tests</a></li>
+<li><a href="#_license">8. License</a></li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_introduction"><a class="link" href="#_introduction">1. Introduction</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A composable promise/future library for Clojure built on top of jdk8 completable
+futures.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_project_maturity"><a class="link" href="#_project_maturity">2. Project Maturity</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Since <em>promissum</em> is a young project there may be some API breakage.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_install"><a class="link" href="#_install">3. Install</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The simplest way to use <em>promissum</em> library in a Clojure project is by including
+it as a dependency:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">funcool/promissum</span> <span class="tok-s">&quot;0.1.0&quot;</span><span class="tok-p">]</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_user_guide"><a class="link" href="#_user_guide">4. User Guide</a></h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_introduction_2"><a class="link" href="#_introduction_2">4.1. Introduction</a></h3>
+<div class="paragraph">
+<p>Is the abstraction that represents the result of an asynchronous operation that will
+be eventually available.</p>
+</div>
+<div class="paragraph">
+<p>Clojure comes with a builtin promise abstraction but it is designed only for
+blocking operations, and in async environments the blocking operations are
+completely discouraged.</p>
+</div>
+<div class="paragraph">
+<p>The <em>promissum</em>'s promise abstraction uses the jdk8 completable future as underlying
+implementation, then all promises can be easily coerced to jdk future or completable
+future with low overhead.</p>
+</div>
+<div class="paragraph">
+<p>The promise consists in a container that eventually will contain a value with
+builtin support for error handling. So the promise has three different states:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>resolved</code>: means that the promise contains a value.</p>
+</li>
+<li>
+<p><code>rejected</code>: means thet the promise contains an error.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_creating_a_promise"><a class="link" href="#_creating_a_promise">4.2. Creating a promise.</a></h3>
+<div class="paragraph">
+<p>It there several different ways to create a promise in <em>promissum</em> library. You can
+create it already resolved with initial value or already rejected with an exception.</p>
+</div>
+<div class="paragraph">
+<p>Let start with a basic example using the commonly known promise delivering in
+clojure:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promissum.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">p</span><span class="tok-p">])</span>
+
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span><span class="tok-p">))</span>
+
+<span class="tok-p">(</span><span class="tok-nf">future</span>
+  <span class="tok-p">(</span><span class="tok-nf">Thread/sleep</span> <span class="tok-mi">200</span><span class="tok-p">)</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/deliver</span> <span class="tok-nb">pr </span><span class="tok-mi">20</span><span class="tok-p">))]</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span>
+             <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-nv">v</span><span class="tok-p">)))</span>
+
+<span class="tok-c1">;; After 200ms it will print `20`</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>An other way to create a promise is using a factory function that can resolve or
+reject promise in asynchronous way. If you are familiar with javascript promises,
+you will found that very familiar:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span>
+          <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">deliver</span><span class="tok-p">]</span>
+            <span class="tok-p">(</span><span class="tok-nf">deliver</span> <span class="tok-mi">1</span><span class="tok-p">))))</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_creating_a_future"><a class="link" href="#_creating_a_future">4.3. Creating a future</a></h3>
+<div class="paragraph">
+<p>The <em>promissum</em> library also exposes a convenient macro for clojure <code>future</code> macro
+replacement. It works in exactly manner that the clojure version, with a little
+difference that it returns a composable promise that can be easyly chained in an
+asynchronous way.</p>
+</div>
+<div class="paragraph">
+<p>See an example:</p>
+</div>
+<div class="paragraph">
+<p>(deref (p/future
+         (Thread/sleep 200)
+         (+ 1 2)))
+;; &#8658; 3</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blocking_operations"><a class="link" href="#_blocking_operations">4.4. Blocking operations</a></h3>
+<div class="paragraph">
+<p>The <em>promissum</em>'s promises can be used as drop in replacement for clojure promises, because them offers also blocking operations:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-o">@</span><span class="tok-nv">pr</span>
+<span class="tok-c1">;; =&gt; 1</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you try to deref a promise that is rejected, the exception will be rereaised in
+the calling thread.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_state_checking"><a class="link" href="#_state_checking">4.5. State checking</a></h3>
+<div class="paragraph">
+<p><em>promissum</em> provides useful predicates that will allow check the state of a promise
+in any time.</p>
+</div>
+<div class="paragraph">
+<p>Let see some examples:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">2</span><span class="tok-p">))</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/promise?</span> <span class="tok-nv">pr</span><span class="tok-p">)</span>
+<span class="tok-c1">;; =&gt; true</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/pending?</span> <span class="tok-nv">pr</span><span class="tok-p">)</span>
+<span class="tok-c1">;; =&gt; false</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/resolved?</span> <span class="tok-nv">pr</span><span class="tok-p">)</span>
+<span class="tok-c1">;; =&gt; true</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/rejected?</span> <span class="tok-nv">pr</span><span class="tok-p">)</span>
+<span class="tok-c1">;; =&gt; false</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/done?</span> <span class="tok-nv">pr</span><span class="tok-p">)</span>
+<span class="tok-c1">;; =&gt; true</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>done?</code> predicate checks if a promise is fullfiled, independently if is resolved
+or rejected.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_promise_chaining"><a class="link" href="#_promise_chaining">4.6. Promise chaining</a></h3>
+<div class="paragraph">
+<p><em>Promissum</em> also offers powerful chaining methods for allow easy compose async
+computations. In previous examples we have seen <code>then</code> function, let see an other
+more complex example using it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">2</span><span class="tok-p">)</span>
+            <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">inc</span><span class="tok-p">)</span>
+            <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">inc</span><span class="tok-p">)))</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span>
+             <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-nv">v</span><span class="tok-p">)))</span>
+
+<span class="tok-c1">;; It will print 4.</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_error_handling"><a class="link" href="#_error_handling">4.7. Error handling</a></h3>
+<div class="paragraph">
+<p>It also exposes a chain method for error handling:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">2</span><span class="tok-p">)</span>
+            <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nf">throw</span> <span class="tok-p">(</span><span class="tok-nf">ex-info</span> <span class="tok-s">&quot;foobar&quot;</span> <span class="tok-p">{}))))))</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-nb">pr </span><span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">error</span><span class="tok-p">]</span>
+              <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Error:&quot;</span> <span class="tok-p">(</span><span class="tok-nf">.getMessage</span> <span class="tok-nv">error</span><span class="tok-p">))))</span>
+<span class="tok-c1">;; Will print something like &quot;Error: foobar&quot;</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>catch</code> chain function also return a promise, that will be resolved or rejected
+depending on that will happen inside the catch handler.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_working_with_collections"><a class="link" href="#_working_with_collections">4.8. Working with collections</a></h3>
+<div class="paragraph">
+<p>In some circumstances you will want wait a completion of few promises at same time,
+and <em>promissum</em> also provides helpers for that:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-o">@</span><span class="tok-p">(</span><span class="tok-nf">p/all</span> <span class="tok-p">[(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">2</span><span class="tok-p">)])</span>
+<span class="tok-c1">;; =&gt; [1 2]</span>
+
+<span class="tok-o">@</span><span class="tok-p">(</span><span class="tok-nf">p/any</span> <span class="tok-p">[(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-nf">ex-info</span> <span class="tok-s">&quot;error&quot;</span> <span class="tok-p">{}))])</span>
+<span class="tok-c1">;; =&gt; 1</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_contribute"><a class="link" href="#_contribute">5. Contribute</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><strong>promissum</strong> unlike Clojure and other Clojure contrib libs, does not have many
+restrictions for contributions. Just open a issue or pull request.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_get_the_code"><a class="link" href="#_get_the_code">6. Get the Code</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><em>promissum</em> is open source and can be found on <a href="https://github.com/funcool/promissum">github</a>.</p>
+</div>
+<div class="paragraph">
+<p>You can clone the public repository with this command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="text">git clone https://github.com/funcool/promissum</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_run_tests"><a class="link" href="#_run_tests">7. Run tests</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>For run tests just execute this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="text">lein test</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_license"><a class="link" href="#_license">8. License</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><em>promissum</em> is licensed under BSD (2-Clause) license:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>Copyright (c) 2015 Andrey Antukh &lt;niwi@niwi.nz&gt;
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2015-07-12 00:26:01 EEST
+</div>
+</div>
+</body>
+</html>
