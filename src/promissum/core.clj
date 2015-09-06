@@ -63,7 +63,8 @@
   "Schedule a functon to execute in
   a provided executor service."
   {:no-doc true}
-  ([func] (schedule *executor* func))
+  ([func]
+   (schedule *executor* func))
   ([^Executor executor ^Runnable func]
    (.execute executor func)))
 
