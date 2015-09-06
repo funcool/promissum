@@ -29,7 +29,7 @@
   (:require [cats.core :as m]
             [cats.context :as mc]
             [cats.protocols :as cats]
-            [promissum.protocols :as proto]
+            [promissum.protocols :as p])
   (:import java.util.concurrent.CompletableFuture
            java.util.concurrent.CompletionStage
            java.util.concurrent.TimeoutException
@@ -104,7 +104,7 @@
   [^CompletionStage cf cb]
   (.thenApplyAsync cf (function cb) *executor*))
 
-(defn- impl-flatmap
+(defn- impl-bind
   [^CompletionStage cf cb]
   (.thenComposeAsync cf (function cb) *executor*))
 
@@ -162,70 +162,70 @@
 
 (extend CompletionStage
   cats/Context
-  {:get-context impl-get-context}
+  {:-get-context impl-get-context}
 
   cats/Extract
-  {:extract impl-extract}
+  {:-extract impl-extract}
 
-  proto/IState
-  {:rejected? impl-rejected?
-   :resolved? impl-resolved?
-   :done? impl-done?}
+  p/IState
+  {:-rejected? impl-rejected?
+   :-resolved? impl-resolved?
+   :-done? impl-done?}
 
-  proto/IFuture
-  {:map impl-map
-   :flatmap impl-flatmap
-   :error impl-error})
+  p/IFuture
+  {:-map impl-map
+   :-bind impl-bind
+   :-error impl-error})
 
 (extend Future
-  proto/IAwaitable
-  {:await impl-await})
+  p/IAwaitable
+  {:-await impl-await})
 
 (extend CompletableFuture
   cats/Context
-  {:get-context impl-get-context}
+  {:-get-context impl-get-context}
 
   cats/Extract
-  {:extract impl-extract}
+  {:-extract impl-extract}
 
-  proto/IState
-  {:rejected? impl-rejected?
-   :resolved? impl-resolved?
-   :done? impl-done?}
+  p/IState
+  {:-rejected? impl-rejected?
+   :-resolved? impl-resolved?
+   :-done? impl-done?}
 
-  proto/IFuture
-  {:map impl-map
-   :flatmap impl-flatmap
-   :error impl-error}
+  p/IFuture
+  {:-map impl-map
+   :-bind impl-bind
+   :-error impl-error}
 
-  proto/IPromise
-  {:deliver impl-deliver})
+  p/IPromise
+  {:-deliver impl-deliver})
 
-(extend-protocol proto/IPromiseFactory
+(extend-protocol p/IPromiseFactory
   clojure.lang.Fn
-  (promise [func]
+  (-promise [func]
     (let [promise (CompletableFuture.)]
       (schedule (fn []
                   (try
-                    (func #(proto/deliver promise %))
+                    (func #(p/-deliver promise %))
                     (catch Throwable e
-                      (proto/deliver promise e)))))
+                      (p/-deliver promise e)))))
       promise))
 
   Throwable
-  (promise [e]
+  (-promise [e]
     (let [p (CompletableFuture.)]
-      (proto/deliver p e)
+      (p/-deliver p e)
       p))
 
   CompletionStage
-  (promise [cs]
+  (-promise [cs]
     cs)
 
   Object
-  (promise [v]
+  (-promise [v]
     (let [p (CompletableFuture.)]
-      (proto/deliver p v)
+      (p/-deliver p v)
       p)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -247,7 +247,7 @@
   promise will be retrned. In case of a plain value (not throwable),
   a resolved promise will be returned."
   ([] (CompletableFuture.))
-  ([v] (proto/promise v)))
+  ([v] (p/-promise v)))
 
 (defn resolved
   "Takes a value `v` and return a resolved promise
@@ -280,32 +280,32 @@
   "Returns true if `p` is a promise
   instance."
   [p]
-  (satisfies? proto/IPromise p))
+  (satisfies? p/IPromise p))
 
 (defn done?
   "Returns true if promise `p` is
   done independently if successfully
   o exceptionally."
   [p]
-  (proto/done? p))
+  (p/-done? p))
 
 (defn rejected?
   "Returns true if promise `p` is
   completed exceptionally."
   [p]
-  (proto/rejected? p))
+  (p/-rejected? p))
 
 (defn resolved?
   "Returns true if promise `p` is
   completed successfully."
   [p]
-  (proto/resolved? p))
+  (p/-resolved? p))
 
 (defn pending?
   "Returns true if promise `p` is
   stil in pending state."
   [p]
-  (not (proto/done? p)))
+  (not (p/-done? p)))
 
 (defn deliver
   "Mark the promise as completed or rejected with optional
@@ -314,37 +314,40 @@
   If value is not specified `nil` will be used. If the value
   is instance of `Throwable` the promise will be rejected."
   ([p]
-   (proto/deliver p nil))
+   (p/-deliver p nil))
   ([p v]
-   (proto/deliver p v)))
+   (p/-deliver p v)))
 
 (defn all
   "Given an array of promises, return a promise
   that is resolved  when all the items in the
   array are resolved."
   [promises]
-  (-> (into-array CompletableFuture (sequence (map proto/promise) promises))
-      (CompletableFuture/allOf)
-      (proto/map (fn [_] (mapv deref promises)))))
+  (m/sequence (map p/-promise promises)))
 
 (defn any
   "Given an array of promises, return a promise
   that is resolved when first one item in the
   array is resolved."
   [promises]
-  (->> (sequence (map proto/promise) promises)
+  (->> (sequence (map p/-promise) promises)
        (into-array CompletableFuture)
        (CompletableFuture/anyOf)))
 
 (defn then
   "A chain helper for promises."
   [p callback]
-  (proto/map p callback))
+  (p/-map p callback))
+
+(defn chain
+  "A variadic chain operation."
+  [p & funcs]
+  (reduce #(then %1 %2) p funcs))
 
 (defn catch
   "Catch all promise chain helper."
   [p callback]
-  (proto/error p callback))
+  (p/-error p callback))
 
 (defn reason
   "Get the rejection reason of this promise.
@@ -356,11 +359,11 @@
 
 (defn await
   ([^CompletionStage cs]
-   (proto/await cs))
+   (p/-await cs))
   ([^CompletionStage cs ^long ms]
-   (proto/await cs ms))
+   (p/-await cs ms))
   ([^CompletionStage cs ^long ms ^Object default]
-   (proto/await cs ms default)))
+   (p/-await cs ms default)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Monad type implementation
