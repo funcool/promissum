@@ -183,22 +183,6 @@
   {:-await impl-await})
 
 (extend CompletableFuture
-  cats/Context
-  {:-get-context impl-get-context}
-
-  cats/Extract
-  {:-extract impl-extract}
-
-  p/IState
-  {:-rejected? impl-rejected?
-   :-resolved? impl-resolved?
-   :-done? impl-done?}
-
-  p/IFuture
-  {:-map impl-map
-   :-bind impl-bind
-   :-catch impl-catch}
-
   p/IPromise
   {:-deliver impl-deliver})
 
