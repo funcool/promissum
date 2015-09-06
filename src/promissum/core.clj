@@ -109,7 +109,7 @@
   [^CompletionStage cf cb]
   (.thenComposeAsync cf (function cb) *executor*))
 
-(defn- impl-error
+(defn- impl-catch
   [^CompletionStage cs callback]
   (->> (function #(callback (.getCause %)))
        (.exceptionally cs)))
@@ -176,7 +176,7 @@
   p/IFuture
   {:-map impl-map
    :-bind impl-bind
-   :-error impl-error})
+   :-catch impl-catch})
 
 (extend Future
   p/IAwaitable
@@ -197,7 +197,7 @@
   p/IFuture
   {:-map impl-map
    :-bind impl-bind
-   :-error impl-error}
+   :-catch impl-catch}
 
   p/IPromise
   {:-deliver impl-deliver})
@@ -348,7 +348,7 @@
 (defn catch
   "Catch all promise chain helper."
   [p callback]
-  (p/-error p callback))
+  (p/-catch p callback))
 
 (defn reason
   "Get the rejection reason of this promise.

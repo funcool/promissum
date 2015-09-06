@@ -35,7 +35,7 @@
   "A basic future abstraction."
   (-map [_ callback] "Chain a promise.")
   (-bind [_ callback] "Chain a promise.")
-  (-error [_ callback] "Catch a error in a promise."))
+  (-catch [_ callback] "Catch a error in a promise."))
 
 (defprotocol IAwaitable
   (-await
