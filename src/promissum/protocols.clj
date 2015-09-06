@@ -27,26 +27,26 @@
 
 (defprotocol IState
   "Additional state related abstraction."
-  (rejected? [_] "Returns true if a promise is rejected.")
-  (resolved? [_] "Returns true if a promise is resolved.")
-  (done? [_] "Retutns true if a promise is already done."))
+  (-rejected? [_] "Returns true if a promise is rejected.")
+  (-resolved? [_] "Returns true if a promise is resolved.")
+  (-done? [_] "Retutns true if a promise is already done."))
 
 (defprotocol IFuture
   "A basic future abstraction."
-  (map [_ callback] "Chain a promise.")
-  (flatmap [_ callback] "Chain a promise.")
-  (error [_ callback] "Catch a error in a promise."))
+  (-map [_ callback] "Chain a promise.")
+  (-bind [_ callback] "Chain a promise.")
+  (-error [_ callback] "Catch a error in a promise."))
 
 (defprotocol IAwaitable
-  (await
+  (-await
     [awaitable]
     [awaitable ms]
     [awaitable ms default]))
 
 (defprotocol IPromise
   "A basic promise abstraction."
-  (deliver [_ value] "Deliver a value into promise."))
+  (-deliver [_ value] "Deliver a value into promise."))
 
 (defprotocol IPromiseFactory
   "A promise constructor abstraction."
-  (promise [_] "Create a promise instance."))
+  (-promise [_] "Create a promise instance."))
