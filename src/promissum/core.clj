@@ -30,7 +30,6 @@
             [cats.context :as mc]
             [cats.protocols :as cats]
             [promissum.protocols :as proto]
-            [manifold.deferred :as md])
   (:import java.util.concurrent.CompletableFuture
            java.util.concurrent.CompletionStage
            java.util.concurrent.TimeoutException
@@ -222,13 +221,6 @@
   CompletionStage
   (promise [cs]
     cs)
-
-  manifold.deferred.IDeferred
-  (promise [d]
-    (let [p (CompletableFuture.)
-          callback #(proto/deliver p %)]
-      (md/on-realized d callback callback)
-      p))
 
   Object
   (promise [v]
