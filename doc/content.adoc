@@ -10,45 +10,45 @@ Andrey Antukh, <niwi@niwi.be>
 
 == Introduction
 
-A composable promise/future library for Clojure built on top of jdk8 completable
-futures.
+A lightweight promise/future abstraction built on top of JDK8 `CompletableFuture`.
 
 
-== Project Maturity
+=== Project Maturity
 
 Since _promissum_ is a young project there may be some API breakage.
 
 
-== Install
+=== Install
 
 The simplest way to use _promissum_ library in a Clojure project is by including
 it as a dependency:
 
 [source, clojure]
 ----
-[funcool/promissum "0.2.0"]
+[funcool/promissum "0.3.0"]
 ----
+
 
 == User Guide
 
 === Introduction
-
-Is the abstraction that represents the result of an asynchronous operation that will
-be eventually available.
-
-Clojure comes with a builtin promise abstraction but it is designed only for
-blocking operations, and in async environments the blocking operations are
-completely discouraged.
-
-The _promissum_'s promise abstraction uses the jdk8 completable future as underlying
-implementation, then all promises can be easily coerced to jdk future or completable
-future with low overhead.
 
 The promise consists in a container that eventually will contain a value with
 builtin support for error handling. So the promise has three different states:
 
 - `resolved`: means that the promise contains a value.
 - `rejected`: means thet the promise contains an error.
+
+In summary: is the abstraction that represents the result of an asynchronous
+operation that will be eventually available.
+
+The _promissum_'s promise abstraction just works on top of the awesome
+`CompletableFuture` future/promise implementation available in JDK8. And offers
+a very lightweight layer on top of it.
+
+NOTE: Clojure comes with a builtin promise abstraction but it is designed only for
+blocking operations, and in async environments the blocking operations are
+completely discouraged.
 
 
 === Creating a promise.
@@ -86,6 +86,9 @@ you will found that very familiar:
             (deliver 1))))
 ----
 
+You should know that `promise` function just return a `CompletableFuture`
+instance without additional wrapping.
+
 
 === Creating a future
 
@@ -104,7 +107,8 @@ See an example:
 
 === Blocking operations
 
-The _promissum_'s promises can be used as drop in replacement for clojure promises, because them offers also blocking operations:
+The _promissum_'s promises can be used as drop in replacement for clojure promises,
+because them offers also blocking operations:
 
 [source, clojure]
 ----
@@ -113,7 +117,19 @@ The _promissum_'s promises can be used as drop in replacement for clojure promis
 ----
 
 If you try to deref a promise that is rejected, the exception will be rereaised in
-the calling thread.
+the calling thread. You should take care that the reraised exception is wrapped in
+`ExecutionException` in the same way as builtin clojure promise/future does.
+
+For avouid unnecesary pain constantly handling that, _promissum_ exposes the
+`await` function. It has the same call signature as clojure builtin deref function
+but if promise contains a exception that exception will be reraised as is (without
+additional wrapping).
+
+[source, clojure]
+----
+(p/await pr)
+;; => 1
+----
 
 
 === State checking
@@ -149,9 +165,12 @@ or rejected.
 
 === Promise chaining
 
-_Promissum_ also offers powerful chaining methods for allow easy compose async
-computations. In previous examples we have seen `then` function, let see an other
-more complex example using it:
+It there different ways to compose/chain computations using promises. We will start
+with the basic, lineal way of chaining computations.
+
+That can be done using `then` or `chain` functions exposed in `promissum.core`
+namespace. Bot them are mainly interchangeable. The main differencia is that
+`chain` is variadic and `then` not.
 
 [source, clojure]
 ----
@@ -159,25 +178,126 @@ more complex example using it:
             (p/then inc)
             (p/then inc)))
 
-(p/then pr (fn [v]
-             (println v)))
-
-;; It will print 4.
+(p/await pr)
+;; => 4
 ----
+
+And here the same example using the `chain` function instead of `then`:
+
+[source, clojure]
+----
+(def pr (p/chain (p/promise 2) inc inc))
+(p/await pr)
+;; => 4
+----
+
+Later, thanks to the link:https://github.com/funcool/cats[cats] library, it there
+other few methods of create promise compositions in more powerfull way.
+
+In first instance, we have a `cats.core/mlet` macro that allows us to compose
+asynchrnous computations that looks like synchronous with *let* like syntax:
+
+[source, clojure]
+----
+(require '[cats.core :as m])
+
+(def pr (m/mlet [a (p/future 2)
+                 b (p/future 3)]
+          (m/return (+ a b))))
+(p/await pr)
+;; => 5
+----
+
+The `mlet` bindings are executed sequentially, waiting in each step for promise
+resolution. If an error occurs in some step, the entire composition will be
+short-circuited, returing exceptionally resolved promise.
+
+The main disadvantage of `mlet` is that it's evaluation model is strictly
+secuential. It is ok for some use cases, when the sequential order is mandatory.
+But, if the strictly secuential model is not mandatory, `mlet` does not take
+the advantage of concurrency.
+
+For solve this problem, it threre `alet` macro. It is almost identical to `mlet`
+from the user experience. Internally it is based in very different abstractions.
+
+Let's go to see an little example that demostrates the functionality of `alet`
+macro. For it, we should firstly define an function that emulates an
+asyncrhonous operation:
+
+[source, clojure]
+----
+(require '[cats.core :as m])
+(require '[promissum.core :as p])
+
+(defn sleep-promise
+  [wait]
+  (p/promise (fn [deliver]
+               (Thread/sleep wait)
+               (deliver wait))))
+----
+
+Now, we will try to use this function together with `mlet` macro and measure the
+execution time:
+
+[source, clojure]
+----
+(time
+ @(m/mlet [x (sleep-promise 42)
+           y (sleep-promise 41)]
+    (m/return (+ x y))))
+;; "Elapsed time: 84.328182 msecs"
+;; => 83
+----
+
+We can observe that it takes 84 seconds to finish executing all chained
+computation. Now, let see how it can be done using `alet` macro:
+
+[source, clojure]
+----
+(time
+ @(m/alet [x (sleep-promise 42)
+           y (sleep-promise 41)]
+    (+ x y)))
+;; "Elapsed time: 44.246427 msecs"
+;; => 83
+----
+
+We can observe that it returns the same result as in previous example,
+but takes almost the half of time to finish execute all the computations. This
+is happens because `alet` is more smarter macro and calculates de dependencies
+between declared bindings and executes them in batches; taking fully advantage
+of having fully miltithreaded/concurrent environment as is JVM.
 
 
 === Error handling
 
-It also exposes a chain method for error handling:
+One of the advantages of using promise abstraction is that it natively has
+a notion of error, so you don't need reinvent it. If some of the computations
+of the composed promise chain/pipeline raises an exception, that one is
+automatically propagated to the last promise making the effect of short-circuiting.
+
+Let see an example:
+
+[source, clojure]
+----
+(def pr (p/chain (p/promise 2)
+                 (fn [v] (throw (ex-info "test" {})))))
+(p/await pr)
+;; => clojure.lang.ExceptionInfo "test" ...
+----
+
+For exception catching facilities, _promissum_ exposes a `catch` function. It just
+works like `then` but with exceptions. It attaches a next computation that only
+will be executend if a previous computation resolves exceptionally:
 
 [source, clojure]
 ----
 (def pr (-> (p/promise 2)
-            (p/then (fn [v] (throw (ex-info "foobar" {}))))))
+            (p/then (fn [v] (throw (ex-info "foobar" {}))))
+            (p/catch (fn [error] :nothing))))
 
-(p/catch pr (fn [error]
-              (println "Error:" (.getMessage error))))
-;; Will print something like "Error: foobar"
+(p/await pr)
+;; => :nothing
 ----
 
 The `catch` chain function also return a promise, that will be resolved or rejected
@@ -187,16 +307,46 @@ depending on that will happen inside the catch handler.
 === Working with collections
 
 In some circumstances you will want wait a completion of few promises at same time,
-and _promissum_ also provides helpers for that:
+and _promissum_ also provides helpers for that.
+
+Imagine that you have a collection of promises and you want to wait until
+all of them are resolved. This can be done using the `all` combinator:
 
 [source, clojure]
 ----
-@(p/all [(p/promise 1) (p/promise 2)])
+(def pr (p/all [(p/promise 1)
+                (p/promise 2)]))
+(p/await pr)
 ;; => [1 2]
+----
 
-@(p/any [(p/promise 1) (p/promise (ex-info "error" {}))])
+It there are also circumstances where you only want arbitrary select of the
+first resolved promise. For this case, you can use the `any` combinator:
+
+[source, clojure]
+----
+(def pr (p/any [(p/promise 1)
+                (p/promise (ex-info "error" {}))]))
+(p/await pr)
 ;; => 1
 ----
+
+Later, for more advanced use cases, _promissum_ is an algebraic structure that
+implements the associative binary operation usually called `mappend`:
+
+[source, clojure]
+----
+(require '[cats.core :as m])
+
+(def pr (m/mappend (p/promise {:a 1})
+                   (p/promise {:b 2})))
+(p/await pr)
+;; => {:a 1 :b 2}
+----
+
+If you are interested in knowing more about it, plase refer to the
+link:https://github.com/funcool/cats[cats documentation].
+
 
 == Contribute
 
@@ -206,7 +356,8 @@ restrictions for contributions. Just open a issue or pull request.
 
 == Get the Code
 
-_promissum_ is open source and can be found on link:https://github.com/funcool/promissum[github].
+_promissum_ is open source and can be found on
+link:https://github.com/funcool/promissum[github].
 
 You can clone the public repository with this command:
 
