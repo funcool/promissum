@@ -382,6 +382,16 @@
                 (fn [[afv avv]]
                   (afv avv))))
 
+    (-pure [_ v]
+      (p/-promise v))
+
+    cats/Semigroup
+    (-mappend [_ mv mv']
+      (p/-map (m/sequence [mv mv'])
+              (fn [[mvv mvv']]
+                (let [ctx (cats/-get-context mvv)]
+                  (cats/-mappend ctx mvv mvv')))))
+
     cats/Monad
     (-mreturn [_ v]
       (p/-promise v))
