@@ -86,8 +86,20 @@ you will found that very familiar:
             (deliver 1))))
 ----
 
-You should know that `promise` function just return a `CompletableFuture`
-instance without additional wrapping.
+_promissum_ also exposes a clojure's `future` alternative that works in the same
+way with the difference that it returns a `CompletableFuture`:
+
+[source, clojure]
+----
+(def pr (p/future
+          (Thread/sleep 200)
+          2))
+@pr
+;; => 2
+----
+
+You should know that `promise` and `future` functions just return
+a `CompletableFuture` instance without additional wrapping.
 
 
 === Creating a future
