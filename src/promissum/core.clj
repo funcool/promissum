@@ -28,7 +28,7 @@
   (:refer-clojure :exclude [future promise deliver await])
   (:require [cats.core :as m]
             [cats.context :as mc]
-            [cats.protocols :as cats]
+            [cats.protocols :as mp]
             [promissum.protocols :as p])
   (:import java.util.concurrent.CompletableFuture
            java.util.concurrent.CompletionStage
@@ -162,10 +162,10 @@
         (throw e'))))))
 
 (extend CompletionStage
-  cats/Context
+  mp/Context
   {:-get-context impl-get-context}
 
-  cats/Extract
+  mp/Extract
   {:-extract impl-extract}
 
   p/IState
@@ -357,14 +357,14 @@
 (def ^{:no-doc true}
   promise-context
   (reify
-    cats/ContextClass
+    mp/ContextClass
     (-get-level [_] mc/+level-default+)
 
-    cats/Functor
+    mp/Functor
     (-fmap [mn f mv]
       (impl-map mv f))
 
-    cats/Applicative
+    mp/Applicative
     (-fapply [_ af av]
       (impl-map (all [af av])
                 (fn [[afv avv]]
@@ -373,14 +373,14 @@
     (-pure [_ v]
       (p/-promise v))
 
-    cats/Semigroup
-    (-mappend [_ mv mv']
+    mp/Semigroup
+    (-mappend [it mv mv']
       (p/-map (m/sequence [mv mv'])
               (fn [[mvv mvv']]
-                (let [ctx (cats/-get-context mvv)]
-                  (cats/-mappend ctx mvv mvv')))))
+                (let [ctx (mp/-get-context mvv)]
+                  (mp/-mappend ctx mvv mvv')))))
 
-    cats/Monad
+    mp/Monad
     (-mreturn [_ v]
       (p/-promise v))
 
