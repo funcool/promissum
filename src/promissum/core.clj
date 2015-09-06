@@ -71,11 +71,11 @@
 ;; Implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare promise-monad)
+(declare promise-context)
 
 (defn- impl-get-context
   [^CompletionStage cs]
-  promise-monad)
+  promise-context)
 
 (defn- impl-extract
   [^CompletionStage cs]
@@ -362,29 +362,29 @@
   ([^CompletionStage cs ^long ms ^Object default]
    (proto/await cs ms default)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Monad type implementation
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^{:no-doc true}
-  promise-monad
+  promise-context
   (reify
+    cats/ContextClass
+    (-get-level [_] mc/+level-default+)
+
     cats/Functor
-    (fmap [mn f mv]
+    (-fmap [mn f mv]
       (impl-map mv f))
 
     cats/Applicative
-    (fapply [_ af av]
+    (-fapply [_ af av]
       (impl-map (all [af av])
                 (fn [[afv avv]]
                   (afv avv))))
 
     cats/Monad
-    (mreturn [_ v]
-      (proto/promise v))
+    (-mreturn [_ v]
+      (p/-promise v))
 
-    (mbind [mn mv f]
-      (let [ctx mc/*context*]
-        (impl-flatmap mv (fn [v]
-                           (m/with-monad ctx
-                             (f v))))))))
+    (-mbind [mn mv f]
+      (impl-bind mv f))))
