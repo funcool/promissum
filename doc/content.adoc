@@ -1,5 +1,5 @@
 = promissum - composable promise/future library for Clojure
-Andrey Antukh, <niwi@niwi.be>
+Andrey Antukh, <niwi@niwi.nz>
 :toc: left
 :toclevels: 2
 :numbered:
