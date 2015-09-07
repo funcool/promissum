@@ -2,10 +2,12 @@
 Andrey Antukh, <niwi@niwi.nz>
 :toc: left
 :toclevels: 2
-:numbered:
+:!numbered:
+:idseparator: -
+:idprefix:
+:sectlinks:
 :source-highlighter: pygments
 :pygments-style: friendly
-:sectlinks:
 
 
 == Introduction
