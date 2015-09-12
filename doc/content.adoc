@@ -108,15 +108,18 @@ a `CompletableFuture` instance without additional wrapping.
 
 The _promissum_ library also exposes a convenient macro for clojure `future` macro
 replacement. It works in exactly manner that the clojure version, with a little
-difference that it returns a composable promise that can be easyly chained in an
+difference that it returns a composable promise that can be easily chained in an
 asynchronous way.
 
 See an example:
 
+[source, clojure]
+----
 (deref (p/future
          (Thread/sleep 200)
          (+ 1 2)))
 ;; => 3
+----
 
 
 === Blocking operations
