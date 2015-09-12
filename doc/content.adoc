@@ -209,20 +209,35 @@ And here the same example using the `chain` function instead of `then`:
 ----
 
 Later, thanks to the link:https://github.com/funcool/cats[cats] library, it there
-other few methods of create promise compositions in more powerfull way.
+other few methods of create promise compositions in more powerfull way: `mlet`
+and `alet` macros.
 
-In first instance, we have a `cats.core/mlet` macro that allows us to compose
-asynchrnous computations that looks like synchronous with *let* like syntax:
+For demostration purposes, imagine you have this function that emulates async operation
+and return a promise:
 
 [source, clojure]
 ----
 (require '[cats.core :as m])
+(require '[promissum.core :as p])
 
-(def pr (m/mlet [a (p/future 2)
-                 b (p/future 3)]
-          (m/return (+ a b))))
-(p/await pr)
-;; => 5
+(defn sleep-promise
+  [wait]
+  (p/promise (fn [deliver]
+               (Thread/sleep wait)
+               (deliver wait))))
+----
+
+Now, we will try to use this function together with `mlet` macro and additionally
+messure the execution time:
+
+[source, clojure]
+----
+(time
+ (p/await (m/mlet [x (sleep-promise 42)
+                   y (sleep-promise 41)]
+             (m/return (+ x y)))))
+;; "Elapsed time: 84.328182 msecs"
+;; => 83
 ----
 
 The `mlet` bindings are executed sequentially, waiting in each step for promise
@@ -237,37 +252,7 @@ the advantage of concurrency.
 For solve this problem, it threre `alet` macro. It is almost identical to `mlet`
 from the user experience. Internally it is based in very different abstractions.
 
-Let's go to see an little example that demostrates the functionality of `alet`
-macro. For it, we should firstly define an function that emulates an
-asyncrhonous operation:
-
-[source, clojure]
-----
-(require '[cats.core :as m])
-(require '[promissum.core :as p])
-
-(defn sleep-promise
-  [wait]
-  (p/promise (fn [deliver]
-               (Thread/sleep wait)
-               (deliver wait))))
-----
-
-Now, we will try to use this function together with `mlet` macro and measure the
-execution time:
-
-[source, clojure]
-----
-(time
- @(m/mlet [x (sleep-promise 42)
-           y (sleep-promise 41)]
-    (m/return (+ x y))))
-;; "Elapsed time: 84.328182 msecs"
-;; => 83
-----
-
-We can observe that it takes 84 seconds to finish executing all chained
-computation. Now, let see how it can be done using `alet` macro:
+Now, we will try to do the same example but using the `alet` macro:
 
 [source, clojure]
 ----
