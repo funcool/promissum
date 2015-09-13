@@ -270,6 +270,8 @@ is happens because `alet` is more smarter macro and calculates de dependencies
 between declared bindings and executes them in batches; taking fully advantage
 of having fully miltithreaded/concurrent environment as is JVM.
 
+You can read more about that link:http://funcool.github.io/cats/latest/#syntax-sugar[here].
+
 
 === Error handling
 
