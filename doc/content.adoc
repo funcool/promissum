@@ -1,5 +1,6 @@
 = promissum - composable promise/future library for Clojure
 Andrey Antukh, <niwi@niwi.nz>
+3.0.0
 :toc: left
 :toclevels: 2
 :!numbered:
@@ -53,7 +54,7 @@ blocking operations, and in async environments the blocking operations are
 completely discouraged.
 
 
-=== Creating a promise.
+=== Creating a promise
 
 It there several different ways to create a promise in _promissum_ library. You can
 create it already resolved with initial value or already rejected with an exception.
@@ -183,7 +184,7 @@ or rejected.
 === Promise chaining
 
 It there different ways to compose/chain computations using promises. We will start
-with the basic, lineal way of chaining computations.
+with the basic: lineal way of chaining computations.
 
 That can be done using `then` or `chain` functions exposed in `promissum.core`
 namespace. Bot them are mainly interchangeable. The main differencia is that
@@ -212,8 +213,8 @@ Later, thanks to the link:https://github.com/funcool/cats[cats] library, it ther
 other few methods of create promise compositions in more powerfull way: `mlet`
 and `alet` macros.
 
-For demostration purposes, imagine you have this function that emulates async operation
-and return a promise:
+For demostration purposes, imagine you have this function that emulates async
+operation and return a promise:
 
 [source, clojure]
 ----
@@ -249,8 +250,8 @@ secuential. It is ok for some use cases, when the sequential order is mandatory.
 But, if the strictly secuential model is not mandatory, `mlet` does not take
 the advantage of concurrency.
 
-For solve this problem, it threre `alet` macro. It is almost identical to `mlet`
-from the user experience. Internally it is based in very different abstractions.
+For solve this problem, it there `alet` macro. It is almost identical to `mlet`
+from the user experience, but internally it is based in very different abstractions.
 
 Now, we will try to do the same example but using the `alet` macro:
 
