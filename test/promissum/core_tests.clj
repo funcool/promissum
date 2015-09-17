@@ -75,7 +75,7 @@
           p3 (p/then p2 inc)]
       (is (= 4 @p3))))
 
-  (testing "Chaining using then"
+  (testing "Chaining using chain"
     (let [p1 (p/future
                (Thread/sleep 200)
                2)
