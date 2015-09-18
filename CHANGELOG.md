@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 0.3.1 ##
+
+Date: 2015-09-19
+
+- Regression introduced in 0.3.0 related to cats 1.0.0 compatibility.
+
 ## Version 0.3.0 ##
 
 Date: 2015-09-18

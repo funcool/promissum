@@ -162,7 +162,7 @@
         (throw e'))))))
 
 (extend CompletionStage
-  mp/Context
+  mp/Contextual
   {:-get-context impl-get-context}
 
   mp/Extract
@@ -357,7 +357,7 @@
 (def ^{:no-doc true}
   promise-context
   (reify
-    mp/ContextClass
+    mp/Context
     (-get-level [_] mc/+level-default+)
 
     mp/Functor

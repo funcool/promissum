@@ -1,6 +1,6 @@
 = promissum - composable promise/future library for Clojure
 Andrey Antukh, <niwi@niwi.nz>
-3.0.0
+0.3.1
 :toc: left
 :toclevels: 2
 :!numbered:
@@ -28,7 +28,7 @@ it as a dependency:
 
 [source, clojure]
 ----
-[funcool/promissum "0.3.0"]
+[funcool/promissum "0.3.1"]
 ----
 
 
