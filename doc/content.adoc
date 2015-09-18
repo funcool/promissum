@@ -213,7 +213,7 @@ Later, thanks to the link:https://github.com/funcool/cats[cats] library, it ther
 other few methods of create promise compositions in more powerfull way: `mlet`
 and `alet` macros.
 
-For demostration purposes, imagine you have this function that emulates async
+For demostration purposes, imagine that you have this function that emulates async
 operation and return a promise:
 
 [source, clojure]
@@ -265,8 +265,8 @@ Now, we will try to do the same example but using the `alet` macro:
 ;; => 83
 ----
 
-We can observe that it returns the same result as in previous example,
-but takes almost the half of time to finish execute all the computations. This
+We can observe that the return value is identical to the previous example,
+but it takes almost half of time to finish execute all the computations. This
 is happens because `alet` is more smarter macro and calculates de dependencies
 between declared bindings and executes them in batches; taking fully advantage
 of having fully miltithreaded/concurrent environment as is JVM.
@@ -353,10 +353,12 @@ If you are interested in knowing more about it, plase refer to the
 link:https://github.com/funcool/cats[cats documentation].
 
 
-== Contribute
+== Developers Guide
 
-**promissum** unlike Clojure and other Clojure contrib libs, does not have many
-restrictions for contributions. Just open a issue or pull request.
+=== Contribute
+
+Unlike Clojure and other Clojure contrib libs, does not have many restrictions for
+contributions. Just open a issue or pull request.
 
 
 == Get the Code
@@ -372,7 +374,7 @@ git clone https://github.com/funcool/promissum
 ----
 
 
-== Run tests
+=== Run tests
 
 For run tests just execute this:
 
@@ -382,7 +384,7 @@ lein test
 ----
 
 
-== License
+=== License
 
 _promissum_ is licensed under BSD (2-Clause) license:
 
