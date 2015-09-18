@@ -1,10 +1,10 @@
-(defproject funcool/promissum "0.3.0-SNAPSHOT"
+(defproject funcool/promissum "0.3.0"
   :description "A composable promise/future library for Clojure."
   :url "https://github.com/funcool/promissum"
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.7.0" :scope "provided"]
-                 [funcool/cats "1.0.0-SNAPSHOT"]]
+                 [funcool/cats "1.0.0"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :source-paths ["src"]

@@ -2,7 +2,7 @@
 
 ## Version 0.3.0 ##
 
-Date: Unreleased
+Date: 2015-09-18
 
 - Update documentation.
 - Adapt to the cats 1.0.0 release.
