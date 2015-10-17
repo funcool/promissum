@@ -139,11 +139,9 @@
      (.get cs)
      (catch ExecutionException e
        (let [e' (.getCause e)]
-         (.setStackTrace e' (.getStackTrace e))
          (throw e')))
      (catch CompletionException e
        (let [e' (.getCause e)]
-         (.setStackTrace e' (.getStackTrace e))
          (throw e')))))
   ([^Future cs ^long ms]
    (impl-await cs ms nil))
