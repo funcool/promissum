@@ -384,3 +384,26 @@
 
     (-mbind [mn mv f]
       (impl-bind mv f))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Pretty printing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- future->map
+  [^CompletableFuture f]
+  (if (pending? f)
+    {:status :pending}
+    (let [v (m/extract f)]
+      (if (rejected? f)
+        {:status :rejected
+         :error (.getMessage v)}
+        {:status :resolved
+         :value v}))))
+
+(defn- future->str
+  [^CompletableFuture f]
+  (str "#<Promise " (pr-str (future->map f)) ">"))
+
+(defmethod print-method CompletableFuture
+  [^CompletableFuture f writer]
+  (.write writer (future->str f)))
