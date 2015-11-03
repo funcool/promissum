@@ -332,6 +332,12 @@
   [p callback]
   (p/-catch p callback))
 
+(defn branch
+  [p callback errback]
+  (-> p
+      (p/-map callback)
+      (p/-catch errback)))
+
 (defn reason
   "Get the rejection reason of this promise.
   Throws an error if the promise isn't rejected."
