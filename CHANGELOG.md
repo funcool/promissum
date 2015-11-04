@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 0.3.3 ##
+
+Date: 2015-11-04
+
+- Add branch function.
+
+
 ## Version 0.3.2 ##
 
 Date: 2015-10-17

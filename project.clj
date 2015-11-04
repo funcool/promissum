@@ -1,4 +1,4 @@
-(defproject funcool/promissum "0.3.2"
+(defproject funcool/promissum "0.3.3"
   :description "A composable promise/future library for Clojure."
   :url "https://github.com/funcool/promissum"
   :license {:name "BSD (2 Clause)"
